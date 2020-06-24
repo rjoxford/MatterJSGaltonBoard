@@ -22,23 +22,23 @@ const height = 1000;
 const xStart = width / 2;
 const yStart = 100;
 
-const rows = 10;
+const rows = 18;
 
 const ballRadius = 10;
 const pegGap = 4 * ballRadius;
-const pegRadius = 0.3 * ballRadius;
+const pegRadius = 0.2 * ballRadius;
 let xGap = pegGap;
 // Isometric
 //let yGap = Math.sin(Math.PI / 3) * xGap;
 // Quincunx
 let yGap = 0.5 * xGap;
 
-const maxBalls = 100;
+const maxBalls = 150;
 
 // Physics Constants
-const restitution = 0.01;
-const friction = 0.01;
-const frictionAir = 0.08;
+const restitution = 0.6;
+const friction = 0.05;
+const frictionAir = 0.06;
 const frictionStatic = 0;
 const slop = 0;
 const gravity = 1;
@@ -74,7 +74,7 @@ world.gravity.scale = gravitySF;
 const buckettoStartGap = 20;
 const bucketwallLength = 600;
 const bucketwallAngle = Math.PI / 3;
-const bucketOpening = 3 * ballRadius;
+const bucketOpening = 4 * ballRadius;
 let leftBumper_xpos = xStart - (bucketwallLength * Math.cos(bucketwallAngle) + bucketOpening) / 2;
 let bumpers_ypos = yStart - ((bucketwallLength * Math.sin(bucketwallAngle)) / 2 + buckettoStartGap);
 let rightBumper_xpos = xStart + (bucketwallLength * Math.cos(bucketwallAngle) + bucketOpening) / 2;
@@ -101,13 +101,10 @@ createTopBucket();
 
 ///////////////////////////////////////////////// Middle (immediately below start point): Pegs
 const starttoPegsGap = 10;
-const rowOffset = 6;
+const rowOffset = 5;
+
 let createPegs = () => {
-  // Set gaps
-
-  //each row
-
-  for (let row = 0 + rowOffset; row + rowOffset < rows + rowOffset + 1; row++) {
+  for (let row = 0 + rowOffset; row < rows + rowOffset; row++) {
     let yOffset = yGap * (row - rowOffset) + starttoPegsGap;
     let xRowOffset = (xGap * row - xGap) / 2;
     //each peg
@@ -135,10 +132,9 @@ World.add(world, floor);
 
 let wallHeight = height - (yStart + starttoPegsGap + rows * yGap + pegstoBaseGap);
 const createPartitionSet = () => {
-  let count = rows + 2;
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < rows + rowOffset + 1; i++) {
     let partition = Bodies.rectangle(
-      xStart - (rows * pegGap) / 2 + (i - 0.5) * pegGap,
+      xStart - ((rows + rowOffset - 1) * pegGap) / 2 + (i - 0.5) * pegGap,
       height - (floorHeight + wallHeight / 2),
       4,
       wallHeight,
@@ -238,16 +234,12 @@ const recycleBallsInterval = setInterval(() => {
 var mouse = Mouse.create(render.canvas);
 var mouseConstraint = MouseConstraint.create(engine, {
   mouse: mouse,
-  visible: false
+  render: { visible: false }
 });
 World.add(world, mouseConstraint);
 // keep the mouse in sync with rendering
 render.mouse = mouse;
 
 Events.on(mouseConstraint, "mousedown", (event) => {
-  //if (source.body === null) {
-  //var box = Bodies.rectangle(mouse.position.x, mouse.position.y, 20, 20);
-  //World.add(world, box);
-  //}
-  addBall();
+  addBall(mouse.position.x, mouse.position.y);
 });
