@@ -25,9 +25,13 @@ const yStart = 100;
 const rows = 14;
 
 const ballRadius = 10;
-// Make
 const pegGap = 4 * ballRadius;
 const pegRadius = 0.3 * ballRadius;
+let xGap = pegGap;
+// Isometric
+//let yGap = Math.sin(Math.PI / 3) * xGap;
+// Quincunx
+let yGap = 0.5 * xGap;
 
 const maxBalls = 100;
 
@@ -53,8 +57,9 @@ let render = Render.create({
   options: {
     width,
     height,
-    wireframe: false,
-    showAngleIndicator: true
+    wireframes: false,
+    showAngleIndicator: false,
+    background: "#fff"
   }
 });
 Render.run(render);
@@ -63,20 +68,49 @@ Render.run(render);
 let world = engine.world;
 world.gravity.scale = gravitySF;
 
-// For peg positions, consider positions from top left
-// Row x offset according to total number rows
-// Individual offset according to count within row
 
-///////////////////////////////////////////////// (Above)Top: Bucket
-let pegSet = () => {
+
+///////////////////////////////////////////////// Top (above start point): Bucket
+// Create bucket
+const bucketwallLength = 600;
+const bucketwallAngle = Math.PI / 3;
+let leftBumper_xpos =
+  xStart - 1.5 * ballRadius - (bucketwallLength * Math.cos(bucketwallAngle)) / 2;
+let leftBumper_ypos = 10 + yStart - (bucketwallLength * Math.sin(bucketwallAngle)) / 2;
+
+let rightBumper_xpos =
+  xStart + (3 / 2) * ballRadius + (bucketwallLength * Math.cos(bucketwallAngle)) / 2;
+let rightBumper_ypos = leftBumper_ypos;
+
+let createTopBucket = () => {
+  let leftBumper = Bodies.rectangle(leftBumper_xpos, leftBumper_ypos, bucketwallLength, 5, {
+    restitution,
+    friction: 0,
+    isStatic: true
+  });
+  Body.rotate(leftBumper, bucketwallAngle);
+
+  let rightBumper = Bodies.rectangle(rightBumper_xpos, rightBumper_ypos, bucketwallLength, 5, {
+    restitution,
+    friction: 0,
+    isStatic: true
+  });
+  Body.rotate(rightBumper, -bucketwallAngle);
+  
+  World.add(world, [leftBumper, rightBumper]);
+};
+createTopBucket();
+
+///////////////////////////////////////////////// Middle (immediately below start point): Pegs
+const starttoPegsGap = 10
+const rowOffset = 3;
+let createPegs = () => {
   // Set gaps
-  let xGap = pegGap;
-  let yGap = xGap * Math.sin(Math.PI / 3);
 
   //each row
-  let rowOffset = 3;
-  for (let row = 0 + rowOffset; row + rowOffset < rows + 1 + rowOffset; row++) {
-    let yOffset = yGap * (row - rowOffset) + 40;
+  
+  for (let row = 0 + rowOffset; row + rowOffset < rows + rowOffset+ 1 ; row++) {
+    let yOffset = yGap * (row - rowOffset) + starttoPegsGap;
     let xRowOffset = (xGap * row - xGap) / 2;
     //each peg
     for (let j = 0; j < row; j++) {
@@ -90,10 +124,12 @@ let pegSet = () => {
     }
   }
 };
-pegSet();
+createPegs();
 
 ///////////////////////////////////////////////// Base: Floor and Partitions
-let floor = Bodies.rectangle(xStart, height - 20, width - 4, 20, {
+const pegstoBaseGap = yGap
+const floorHeight = 20
+let floor = Bodies.rectangle(xStart, height - floorHeight/2, width - 4, floorHeight, {
   restitution,
   isStatic: true
 });
@@ -101,7 +137,7 @@ World.add(world, floor);
 
 const createPartitionSet = () => {
   let count = rows + 2;
-  let wallheight = height - yStart - rows * pegGap * Math.sin(Math.PI / 3);
+  let wallheight = height - (yStart - rows * pegGap * Math.sin(Math.PI / 3);
   for (let i = 0; i < count; i++) {
     let partition = Bodies.rectangle(
       xStart - (rows * pegGap) / 2 + (i - 0.5) * pegGap,
@@ -117,43 +153,8 @@ const createPartitionSet = () => {
 };
 createPartitionSet();
 
-// Show start position
-// let addStartmark = () => {
-//   let startmark = Bodies.circle(xStart, yStart, 1.5 * pegRadius, {
-//     isStatic: true
-//   });
-//   World.add(world, startmark);
-// };
-// addStartmark();
 
-// Create bucket
-const bucketwallLength = 600;
-const bucketwallAngle = Math.PI / 3;
-let leftBumper_xpos =
-  xStart - (3 / 2) * ballRadius - (bucketwallLength * Math.cos(bucketwallAngle)) / 2;
-let leftBumper_ypos = 10 + yStart - (bucketwallLength * Math.sin(bucketwallAngle)) / 2;
 
-let rightwall_xpos =
-  xStart + (3 / 2) * ballRadius + (bucketwallLength * Math.cos(bucketwallAngle)) / 2;
-let rightwall_ypos = leftBumper_ypos;
-
-const createBoundaries = () => {
-  let leftBumper = Bodies.rectangle(leftBumper_xpos, leftBumper_ypos, bucketwallLength, 5, {
-    restitution,
-    friction: 0,
-    isStatic: true
-  });
-  Body.rotate(leftBumper, bucketwallAngle);
-  World.add(world, leftBumper);
-  let rightwall = Bodies.rectangle(rightwall_xpos, rightwall_ypos, bucketwallLength, 5, {
-    restitution,
-    friction: 0,
-    isStatic: true
-  });
-  Body.rotate(rightwall, -bucketwallAngle);
-  World.add(world, rightwall);
-};
-createBoundaries();
 
 ///////////////////////////////////////////////// Balls...
 // Generate randomness
@@ -190,7 +191,7 @@ let createBalls = (numberBalls) => {
 createBalls(maxBalls);
 
 ///////////////////////////////////////////////// Time controlled functions
-//TODO - clear and reset interval on window active/inactive
+
 // const Interval = setInterval(() => {
 //   addBall(xStart, yStart);
 //   // as a precaution remove plinkos from world.bodies if the array surpasses a certain threshold
@@ -199,6 +200,42 @@ createBalls(maxBalls);
 //     World.remove(world, existingBalls[0]);
 //   }
 // }, 1200);
+
+let existingBalls = () => {
+  return world.bodies.filter((body) => body.label === "ball");
+};
+
+// Balls suffer compression.
+// As a temporary workaround make balls in buckets static
+// This will also have benefit of reducing engine load
+const makeStaticInterval = setInterval(() => {
+  // let existingBalls = world.bodies.filter((body) => body.label === "ball");
+  existingBalls().forEach(function(ball) {
+    let ballHeight = ball.position.y;
+    let ballSpeed = ball.speed;
+    if (ballHeight > minHeight && ballSpeed < 1) {
+      Body.set(ball, {isStatic: true});
+    }
+  });
+}, 1200);
+
+// Temporary Mopup as above
+const makeStaticMopUp = setTimeout(() => {
+  existingBalls().forEach(function(ball) {
+    let ballHeight = ball.position.y;
+    let ballSpeed = ball.speed;
+    if (ballHeight > minHeight && ballSpeed < 1) {
+      Body.set(ball, {isStatic: true});
+    }
+  });
+}, 20000);
+
+// Recyclcle Balls
+const recycleBallsInterval = setInterval(() => {
+  if (existingBalls().length > 200) {
+    World.remove(world, existingBalls[0]);
+  }
+}, 1200);
 
 ///////////////////////////////////////////////// Mouse Control
 var mouse = Mouse.create(render.canvas);
