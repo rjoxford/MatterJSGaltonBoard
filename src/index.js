@@ -22,7 +22,7 @@ const height = 1000;
 const xStart = width / 2;
 const yStart = 100;
 
-const rows = 14;
+const rows = 10;
 
 const ballRadius = 10;
 const pegGap = 4 * ballRadius;
@@ -36,9 +36,10 @@ let yGap = 0.5 * xGap;
 const maxBalls = 100;
 
 // Physics Constants
-const restitution = 1 / 100;
+const restitution = 0.01;
 const friction = 0.01;
 const frictionAir = 0.08;
+const frictionStatic = 0;
 const slop = 0;
 const gravity = 1;
 const gravitySF = 0.0018;
@@ -68,48 +69,45 @@ Render.run(render);
 let world = engine.world;
 world.gravity.scale = gravitySF;
 
-
-
 ///////////////////////////////////////////////// Top (above start point): Bucket
 // Create bucket
+const buckettoStartGap = 20;
 const bucketwallLength = 600;
 const bucketwallAngle = Math.PI / 3;
-let leftBumper_xpos =
-  xStart - 1.5 * ballRadius - (bucketwallLength * Math.cos(bucketwallAngle)) / 2;
-let leftBumper_ypos = 10 + yStart - (bucketwallLength * Math.sin(bucketwallAngle)) / 2;
-
-let rightBumper_xpos =
-  xStart + (3 / 2) * ballRadius + (bucketwallLength * Math.cos(bucketwallAngle)) / 2;
-let rightBumper_ypos = leftBumper_ypos;
+const bucketOpening = 3 * ballRadius;
+let leftBumper_xpos = xStart - (bucketwallLength * Math.cos(bucketwallAngle) + bucketOpening) / 2;
+let bumpers_ypos = yStart - ((bucketwallLength * Math.sin(bucketwallAngle)) / 2 + buckettoStartGap);
+let rightBumper_xpos = xStart + (bucketwallLength * Math.cos(bucketwallAngle) + bucketOpening) / 2;
 
 let createTopBucket = () => {
-  let leftBumper = Bodies.rectangle(leftBumper_xpos, leftBumper_ypos, bucketwallLength, 5, {
+  let leftBumper = Bodies.rectangle(leftBumper_xpos, bumpers_ypos, bucketwallLength, 5, {
     restitution,
     friction: 0,
+    frictionStatic: 0,
     isStatic: true
   });
   Body.rotate(leftBumper, bucketwallAngle);
 
-  let rightBumper = Bodies.rectangle(rightBumper_xpos, rightBumper_ypos, bucketwallLength, 5, {
+  let rightBumper = Bodies.rectangle(rightBumper_xpos, bumpers_ypos, bucketwallLength, 5, {
     restitution,
     friction: 0,
     isStatic: true
   });
   Body.rotate(rightBumper, -bucketwallAngle);
-  
+
   World.add(world, [leftBumper, rightBumper]);
 };
 createTopBucket();
 
 ///////////////////////////////////////////////// Middle (immediately below start point): Pegs
-const starttoPegsGap = 10
-const rowOffset = 3;
+const starttoPegsGap = 10;
+const rowOffset = 6;
 let createPegs = () => {
   // Set gaps
 
   //each row
-  
-  for (let row = 0 + rowOffset; row + rowOffset < rows + rowOffset+ 1 ; row++) {
+
+  for (let row = 0 + rowOffset; row + rowOffset < rows + rowOffset + 1; row++) {
     let yOffset = yGap * (row - rowOffset) + starttoPegsGap;
     let xRowOffset = (xGap * row - xGap) / 2;
     //each peg
@@ -127,23 +125,23 @@ let createPegs = () => {
 createPegs();
 
 ///////////////////////////////////////////////// Base: Floor and Partitions
-const pegstoBaseGap = yGap
-const floorHeight = 20
-let floor = Bodies.rectangle(xStart, height - floorHeight/2, width - 4, floorHeight, {
-  restitution,
+const pegstoBaseGap = yGap;
+const floorHeight = 20;
+let floor = Bodies.rectangle(xStart, height - floorHeight / 2, width - 4, floorHeight, {
+  restitution: 0,
   isStatic: true
 });
 World.add(world, floor);
 
+let wallHeight = height - (yStart + starttoPegsGap + rows * yGap + pegstoBaseGap);
 const createPartitionSet = () => {
   let count = rows + 2;
-  let wallheight = height - (yStart - rows * pegGap * Math.sin(Math.PI / 3);
   for (let i = 0; i < count; i++) {
     let partition = Bodies.rectangle(
       xStart - (rows * pegGap) / 2 + (i - 0.5) * pegGap,
-      height - yStart / 2 - wallheight / 2 + 16,
+      height - (floorHeight + wallHeight / 2),
       4,
-      wallheight,
+      wallHeight,
       {
         isStatic: true
       }
@@ -152,9 +150,6 @@ const createPartitionSet = () => {
   }
 };
 createPartitionSet();
-
-
-
 
 ///////////////////////////////////////////////// Balls...
 // Generate randomness
@@ -213,8 +208,9 @@ const makeStaticInterval = setInterval(() => {
   existingBalls().forEach(function(ball) {
     let ballHeight = ball.position.y;
     let ballSpeed = ball.speed;
+    let minHeight = height - (floorHeight + wallHeight);
     if (ballHeight > minHeight && ballSpeed < 1) {
-      Body.set(ball, {isStatic: true});
+      Body.set(ball, { isStatic: true });
     }
   });
 }, 1200);
@@ -224,8 +220,9 @@ const makeStaticMopUp = setTimeout(() => {
   existingBalls().forEach(function(ball) {
     let ballHeight = ball.position.y;
     let ballSpeed = ball.speed;
+    let minHeight = height - (floorHeight + wallHeight);
     if (ballHeight > minHeight && ballSpeed < 1) {
-      Body.set(ball, {isStatic: true});
+      Body.set(ball, { isStatic: true });
     }
   });
 }, 20000);
@@ -240,7 +237,8 @@ const recycleBallsInterval = setInterval(() => {
 ///////////////////////////////////////////////// Mouse Control
 var mouse = Mouse.create(render.canvas);
 var mouseConstraint = MouseConstraint.create(engine, {
-  mouse: mouse
+  mouse: mouse,
+  visible: false
 });
 World.add(world, mouseConstraint);
 // keep the mouse in sync with rendering
